@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0f0c29 0%, #302b63 60%, #24243e 100%);
+    font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+    color: #e8e8f0;
+  }
+  .header {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.03);
+  }
+  .header-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 10px; color: #8888aa; margin-top: 2px; }
+  .body { padding: 20px; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 10px; letter-spacing: 0.12em; font-weight: 700; margin-bottom: 8px; }
+  .label-purple { color: #a78bfa; }
+  .label-blue { color: #60a5fa; }
+  textarea {
+    width: 100%; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(167,139,250,0.4); border-radius: 10px;
+    padding: 12px 14px; color: #e8e8f0; font-size: 14px;
+    line-height: 1.6; resize: vertical; outline: none;
+    font-family: inherit; transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #a78bfa; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt-btn {
+    padding: 7px 14px; border-radius: 8px; font-size: 13px;
+    cursor: pointer; border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04); color: #9898b8;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .opt-btn.active-purple {
+    border-color: #a78bfa; background: rgba(167,139,250,0.2); color: #c4b5fd;
+  }
+  .opt-btn.active-blue {
+    border-color: #60a5fa; background: rgba(96,165,250,0.2); color: #93c5fd;
+  }
+  .gen-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    border: none; border-radius: 12px; color: #fff;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    letter-spacing: 0.05em; font-family: inherit; transition: opacity 0.2s;
+  }
+  .gen-btn:disabled { background: rgba(167,139,250,0.3); color: #aaa; cursor: not-allowed; }
+  .error-box {
+    color: #fca5a5; font-size: 12px;
+    background: rgba(248,113,113,0.1); padding: 10px 14px;
+    border-radius: 8px; border: 1px solid rgba(248,113,113,0.2);
+    display: none;
+  }
+  .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .copy-btn {
+    padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid rgba(96,165,250,0.5);
+    background: rgba(96,165,250,0.12); color: #60a5fa; font-family: inherit; transition: all 0.2s;
+  }
+  .copy-btn.copied { border-color: #34d399; background: rgba(52,211,153,0.15); color: #34d399; }
+  #output-area {
+    border: 1px solid rgba(96,165,250,0.25);
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px; min-height: 200px;
+    display: none;
+  }
+  #output-text {
+    width: 100%; background: transparent; border: none;
+    padding: 16px; color: #d8d8f0; font-size: 13px;
+    line-height: 1.85; resize: vertical; outline: none; font-family: inherit;
+    min-height: 200px;
+  }
+  .loading-msg { text-align: center; padding: 30px; color: #6666aa; font-size: 13px; }
+  .history-btn {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 12px; margin-bottom: 6px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px; color: #7878a8; font-size: 12px;
+    cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: inherit;
+  }
+  #history-section { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">✦</div>
+  <div>
+    <div class="header-title">Prompt Generator</div>
+    <div class="header-sub">AIプロンプト生成ツール</div>
+  </div>
+</div>
+
+<div class="body">
+  <!-- Topic -->
+  <div>
+    <div class="label label-purple">TOPIC / テーマ</div>
+    <textarea id="topic" rows="3" placeholder="例：在職老齢年金をわかりやすく説明する"></textarea>
+  </div>
+
+  <!-- Audience -->
+  <div>
+    <div class="label label-purple">AUDIENCE / 対象読者</div>
+    <div class="btn-row" id="audience-btns">
+      <button class="opt-btn active-purple" data-value="初心者・入門者" onclick="selectAudience(this)">初心者・入門者</button>
+      <button class="opt-btn" data-value="中級者" onclick="selectAudience(this)">中級者</button>
+      <button class="opt-btn" data-value="専門家・上級者" onclick="selectAudience(this)">専門家・上級者</button>
+      <button class="opt-btn" data-value="一般の方（幅広く）" onclick="selectAudience(this)">一般の方（幅広く）</button>
+    </div>
+  </div>
+
+  <!-- Style -->
+  <div>
+    <div class="label label-blue">STYLE / 出力スタイル</div>
+    <div class="btn-row" id="style-btns">
+      <button class="opt-btn active-blue" data-value="箇条書き・構造化" onclick="selectStyle(this)">箇条書き・構造化</button>
+      <button class="opt-btn" data-value="会話形式・対話的" onclick="selectStyle(this)">会話形式・対話的</button>
+      <button class="opt-btn" data-value="学術的・論文スタイル" onclick="selectStyle(this)">学術的・論文スタイル</button>
+      <button class="opt-btn" data-value="実践的・ハウツー形式" onclick="selectStyle(this)">実践的・ハウツー形式</button>
+    </div>
+  </div>
+
+  <div id="error-box" class="error-box"></div>
+
+  <button class="gen-btn" id="gen-btn" onclick="generate()">✦ プロンプトを生成</button>
+
+  <!-- Output -->
+  <div id="output-area">
+    <div class="output-header">
+      <div class="label label-blue" style="margin-bottom:0">生成されたプロンプト</div>
+      <button class="copy-btn" id="copy-btn" onclick="copyText()">📋 コピー</button>
+    </div>
+    <div id="loading-msg" class="loading-msg" style="display:none">生成しています...</div>
+    <textarea id="output-text" rows="14"></textarea>
+  </div>
+
+  <!-- History -->
+  <div id="history-section">
+    <div class="label" style="color:#555588;margin-bottom:8px">HISTORY / 履歴</div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<script>
+let selectedAudience = "初心者・入門者";
+let selectedStyle = "箇条書き・構造化";
+let history = [];
+
+function selectAudience(btn) {
+  document.querySelectorAll('#audience-btns .opt-btn').forEach(b => b.classList.remove('active-purple'));
+  btn.classList.add('active-purple');
+  selectedAudience = btn.dataset.value;
+}
+
+function selectStyle(btn) {
+  document.querySelectorAll('#style-btns .opt-btn').forEach(b => b.classList.remove('active-blue'));
+  btn.classList.add('active-blue');
+  selectedStyle = btn.dataset.value;
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+async function generate() {
+  const topic = document.getElementById('topic').value.trim();
+  if (!topic) { showError('テーマを入力してください'); return; }
+  hideError();
+
+  const genBtn = document.getElementById('gen-btn');
+  const outputArea = document.getElementById('output-area');
+  const loadingMsg = document.getElementById('loading-msg');
+  const outputText = document.getElementById('output-text');
+
+  genBtn.disabled = true;
+  genBtn.textContent = '⏳ 生成中...';
+  outputArea.style.display = 'block';
+  loadingMsg.style.display = 'block';
+  outputText.style.display = 'none';
+  outputText.value = '';
+
+  const userMessage = `以下の条件でClaude用の高品質なプロンプトを日本語で生成してください。
+
+テーマ：${topic}
+対象読者：${selectedAudience}
+出力スタイル：${selectedStyle}
+
+以下の形式でプレーンテキストのみ出力してください：
+
+【ペルソナ】
+あなたは〜の専門家です。
+
+【指示】
+〜についてわかりやすく説明してください。
+
+【条件】
+1. 〜
+2. 〜
+3. 〜
+4. 〜
+5. 〜
+
+【ルール】
+- 〜
+- 〜
+- 〜`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: userMessage }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    if (!text) throw new Error("レスポンスが空です");
+
+    outputText.value = text;
+    history.unshift({ topic, prompt: text });
+    if (history.length > 5) history.pop();
+    renderHistory();
+
+  } catch(e) {
+    showError('エラー: ' + e.message);
+    outputArea.style.display = 'none';
+  } finally {
+    loadingMsg.style.display = 'none';
+    outputText.style.display = 'block';
+    genBtn.disabled = false;
+    genBtn.textContent = '✦ プロンプトを生成';
+  }
+}
+
+function copyText() {
+  const text = document.getElementById('output-text').value;
+  const btn = document.getElementById('copy-btn');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  } else {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+  }
+  btn.textContent = '✓ コピー完了！';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
+}
+
+function renderHistory() {
+  const section = document.getElementById('history-section');
+  const list = document.getElementById('history-list');
+  if (history.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = history.map((item, i) =>
+    `<button class="history-btn" onclick="loadHistory(${i})">↩ ${item.topic}</button>`
+  ).join('');
+}
+
+function loadHistory(i) {
+  document.getElementById('topic').value = history[i].topic;
+  document.getElementById('output-text').value = history[i].prompt;
+  document.getElementById('output-area').style.display = 'block';
+  document.getElementById('output-text').style.display = 'block';
+  document.getElementById('loading-msg').style.display = 'none';
+}
+</script>
+</body>
+</html>
